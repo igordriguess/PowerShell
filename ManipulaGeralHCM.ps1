@@ -272,7 +272,7 @@ $restartScript = Read-Host -Prompt "Deseja reiniciar o script? Sim(S) Não(N)"
         (Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$nome*"} |
         Where-Object{$_.pathname -like "*_$codAmb*"} | Where-Object{$_.pathname -like "*Concentradora*"}).StartService()
 
-     }if($comando -eq "1" -and $service -eq "IH"){
+     }if($comando -eq "1" -and $service -eq "INT"){
         (Get-WMIObject win32_service -ComputerName OCSENINT01 | Where-Object{$_.pathname -like "*$nome*"} |
         Where-Object{$_.pathname -like "*_$codAmb*"} | Where-Object{$_.pathname -like "*HCM_Integrador*"}).StartService()
 
@@ -306,7 +306,7 @@ $restartScript = Read-Host -Prompt "Deseja reiniciar o script? Sim(S) Não(N)"
         (Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$nome*"} |
         Where-Object{$_.pathname -like "*_$codAmb*"} | Where-Object{$_.pathname -like "*Concentradora*"}).StopService()
 
-     }if($comando -eq "2" -and $service -eq "IH"){
+     }if($comando -eq "2" -and $service -eq "INT"){
         (Get-WMIObject win32_service -ComputerName OCSENINT01 | Where-Object{$_.pathname -like "*$nome*"} |
         Where-Object{$_.pathname -like "*_$codAmb*"} | Where-Object{$_.pathname -like "*HCM_Integrador*"}).StopService()
 
