@@ -340,7 +340,7 @@ $restartScript = Read-Host -Prompt "Deseja reiniciar o script? Sim(S) Não(N)"
         Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$nome*"} |
         Where-Object{$_.pathname -like "*_$codAmb*"} | Where-Object{$_.pathname -like "*Concentradora*"} | Format-Table -AutoSize PSComputerName, Name, State, PathName
 
-     }if($service -eq "IH"){
+     }if($service -eq "INT"){
         Get-WMIObject win32_service -ComputerName OCSENINT01| Where-Object{$_.pathname -like "*$nome*"} |
         Where-Object{$_.pathname -like "*_$codAmb*"} | Where-Object{$_.pathname -like "*HCM_Integrador*"} | Format-Table -AutoSize PSComputerName, Name, State, PathName
      }
