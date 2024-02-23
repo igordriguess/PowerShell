@@ -29,7 +29,7 @@ Invoke-Command -ComputerName OCMEGTSMETA03 -ScriptBlock {
     (Get-Content -Path $AppControl | Where-Object { $_ -like "*App2*" } | Select-Object -Last 1).Trim()
 
 #DEFINIÇÃO DAS VARIÁVEIS
-$app = Read-Host "Qual o número do aplicativo? Insira o próximo número do valor apresentado anteriormente..."
+$app = Read-Host "Qual o número do aplicativo? Insira o próximo número do valor apresentado anteriormente"
 $appname = Read-Host "Qual o nome do aplicativo? Ex. Teste"
 $path = Read-Host "Qual o diretório do path? Ex. D:\Teste\Teste\teste.exe"
 $startup = Read-Host "Qual o diretório de inicialização? E. D:\Teste\Teste\"
