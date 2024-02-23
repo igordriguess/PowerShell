@@ -1,55 +1,66 @@
 Clear-Host
-Write-Host "Cria pasta de aplicação HCM" -ForegroundColor Green;
+Write-Host "Cria pasta CLIENT do HCM no servidor OCMEGTSHCM01" -ForegroundColor Green;
 
-$server = Read-Host "Digite o nome do servidor onde a aplicação será instalada";
+Invoke-Command -ComputerName ocmegtshcm01 -ScriptBlock{
+#COLETA O PDB DO CLIENTE
+    $codPDB = Read-Host "Qual o código PDB do cliente?"
 
-Invoke-Command -ComputerName $server -ScriptBlock{
-    <# Coletando as informações #>
-    $name = Read-Host "Digite o nome do cliente";
-    $getCode = Read-Host "Digite o código HCM do cliente";
-    $tipAmb = Read-Host "Qual o tipo de ambiente? (p)Produção, (h)Homologação";
-    $cliente = $name + "_" + $getCode + "_" + $tipAmb;
-    Write-Host Servidor = $server -ForegroundColor Yellow;
-    Write-Host Cliente = $name -ForegroundColor Yellow;
-    Write-Host Código = $getCode -ForegroundColor Yellow;
-    Write-Host Tipo de ambiente = $tipAmb -ForegroundColor Yellow;
-    Write-Host Pasta = $cliente -ForegroundColor Yellow;
+#CRIA A PASTA PDB DO CLIENTE
+    New-Item -Path "D:\Clientes\Senior\$codPDB" -ItemType Directory;
 
-    <# Criando a pasta #>
-    New-Item -Path "D:\$cliente" -ItemType Directory;
-
-    <# Aplica as permissões NTFS de um diretório de origem #>
-    $PERMISSIONS = Get-Acl -Path "D:\SeniorTI\Modelo\"
-    Set-Acl -AclObject $PERMISSIONS -Path "D:\$cliente"
+#APLICA AS PERMISSÕES NTFS DE UM DIRETÓRIO DE ORIGEM
+    $PERMISSIONS = Get-Acl -Path "D:\Clientes\MODELO\"
+    $PERMISSIONS.SetAccessRuleProtection($true, $false)
+    Set-Acl -AclObject $PERMISSIONS -Path "D:\Clientes\Senior\$codPDB"
 
     Write-Host "Pasta criada com sucesso!!" -ForegroundColor Green;
 
-    <# Aplica as permissões do cliente #>
-    $PERMISSIONS = Get-ACL -Path "D:\$cliente\"
-    $codPDB = Read-Host "Digite o código PDB do cliente"
-    if ($tipAmb -eq "p") {
-        $grupo1 = "MEGACLOUD\" + $codPDB + " - " + $name + "_HCM_Producao"
-        $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule($grupo1,"Modify", "ContainerInherit,ObjectInherit", "None", "Allow")
-        $PERMISSIONS.SetAccessRule($NEWPERMISSION)
-        $PERMISSIONS | Set-Acl -Path "D:\$cliente"
+#DEFINIÇÃO DE SUBPASTA DO CLIENTE
+    $nomeCli = Read-Host "Qual o nome do cliente?"
+    $codCli = Read-Host "Qual o código HCM do cliente?"
+    $clientHomol = $nomeCli + "_" + $codCli + "_" + "clienth"
+    $clientProd = $nomeCli + "_" + $codCli + "_" + "clientp"
 
-        <# Cria o compartilhamento da pasta #>
-            $folderPath = "D:\$cliente"
-            $shareName = "$cliente" + "$"
-            New-SmbShare -Path $folderPath -Name $shareName -FullAccess "MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER" -ChangeAccess "MEGACLOUD\Resolvedores Cloud", "$grupo1"
+#APLICA AS PERMISSÕES DO CLIENTE
+    $PERMISSIONS = Get-ACL -Path "D:\Clientes\Senior\$codPDB\";
+    $grupoPRD = "MEGACLOUD\" + $codPDB + " - " + $nomeCli + "_HCM_PRODUCAO"
+    $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule($grupoPRD,"Modify", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $PERMISSIONS.SetAccessRule($NEWPERMISSION);
+    $PERMISSIONS | Set-Acl -Path "D:\Clientes\Senior\$codPDB";
 
-     }if ($tipAmb -eq "h") {
-        $grupo2 = "MEGACLOUD\" + $codPDB + " - " + $name + "_HCM_Homologacao"
-        $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule($grupo2,"Modify", "ContainerInherit,ObjectInherit", "None", "Allow")
-        $PERMISSIONS.SetAccessRule($NEWPERMISSION)
-        $PERMISSIONS | Set-Acl -Path "D:\$cliente"
+    $PERMISSIONS = Get-ACL -Path "D:\Clientes\Senior\$codPDB\";
+    $grupoHML = "MEGACLOUD\" + $codPDB + " - " + $nomeCli + "_HCM_HOMOLOGACAO"
+    $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule($grupoHML,"Modify", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $PERMISSIONS.SetAccessRule($NEWPERMISSION);
+    $PERMISSIONS | Set-Acl -Path "D:\Clientes\Senior\$codPDB";
 
-        <# Cria o compartilhamento da pasta #>
-            $folderPath = "D:\$cliente"
-            $shareName = "$cliente" + "$"
-            New-SmbShare -Path $folderPath -Name $shareName -FullAccess "MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER" -ChangeAccess "MEGACLOUD\Resolvedores Cloud", "$grupo2"}
+    $PERMISSIONS = Get-ACL -Path "D:\Clientes\Senior\$codPDB\";
+    $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule("MEGACLOUD\Resolvedores Cloud","Modify", "ContainerInherit,ObjectInherit", "None", "Allow");
+    $PERMISSIONS.SetAccessRule($NEWPERMISSION);
+    $PERMISSIONS | Set-Acl -Path "D:\Clientes\Senior\$codPDB";
 
-    Write-Host "Aplicando permissões e criando o compartilhamento da pasta..." -ForegroundColor Green;
-}
+    $PERMISSIONS = Get-ACL -Path "D:\Clientes\Senior\$codPDB\";
+    $fullControl = [System.Security.AccessControl.FileSystemRights]::FullControl;
+    $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule("MEGACLOUD\CloudOps", $fullControl, "ContainerInherit,ObjectInherit", "None", "Allow");
+    $PERMISSIONS.SetAccessRule($NEWPERMISSION);
+    $PERMISSIONS | Set-Acl -Path "D:\Clientes\Senior\$codPDB";
 
-powershell -WindowStyle hidden -Command "& {[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.MessageBox]::Show('Pasta criada com sucesso!! Valide as permissões e se o compartilhamento da pasta está correto.','SUCESSO')}"
+    $PERMISSIONS = Get-ACL -Path "D:\Clientes\Senior\$codPDB\";
+    $fullControl = [System.Security.AccessControl.FileSystemRights]::FullControl;
+    $NEWPERMISSION = New-Object System.Security.AccessControl.FileSystemAccessRule("MEGACLOUD\HCM Manager", $fullControl, "ContainerInherit,ObjectInherit", "None", "Allow");
+    $PERMISSIONS.SetAccessRule($NEWPERMISSION);
+    $PERMISSIONS | Set-Acl -Path "D:\Clientes\Senior\$codPDB";
+
+    Write-Host "Aplicando permissões..." -ForegroundColor Green;
+
+#DEFINIÇÃO DE SUBPASTA DO CLIENTE
+    $clientHomol = $nomeCli + "_" + $codCli + "_" + "clienth"
+    $clientProd = $nomeCli + "_" + $codCli + "_" + "clientp"
+
+#CRIA AS PASTAS DE APLICAÇÃO DO CLIENTE
+    New-Item -Path "D:\Clientes\Senior\$codPDB\$clientHomol" -ItemType Directory;
+    New-Item -Path "D:\Clientes\Senior\$codPDB\$clientProd" -ItemType Directory;
+
+        }
+
+powershell -WindowStyle hidden -Command "& {[System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.MessageBox]::Show('Pasta criada com sucesso!! Valide se as permissões estão corretas.','SUCESSO')}"
