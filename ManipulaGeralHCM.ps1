@@ -371,7 +371,7 @@ $restartScript = Read-Host -Prompt "Deseja reiniciar o script? Sim(S) Não(N)"
     Write-Host "Consultando processos..." -ForegroundColor Yellow
 
     #CONSULTA OS PROCESSOS EM EXECUÇÃO
-    Get-Process -Name * | where {$_.path -like "*$cliente*"} | where {$_.path -like "*_$tipAmb*"} | Format-Table -AutoSize ID, ProcessName, Path
+    Get-Process -Name * | Where-Object {$_.path -like "*$cliente*"} | Where-Object {$_.path -like "*_$tipAmb*"} | Format-Table -AutoSize ID, ProcessName, Path
 
     $processo = Read-Host "Deseja Encerrar algum processo? (S)Sim, (N)Não"
 
@@ -379,11 +379,11 @@ $restartScript = Read-Host -Prompt "Deseja reiniciar o script? Sim(S) Não(N)"
     $comando = Read-Host "Digite o ID do processo que você deseja encerrar"
 
     #ENCERRA O PROCESSO DESEJADO
-    Get-Process | where {$_.id -like "*$comando*"} | Stop-Process -Force
+    Get-Process | Where-Object  {$_.id -like "*$comando*"} | Stop-Process -Force
 
     Write-Host "Processo encerrado com sucesso!!" -ForegroundColor Yellow
 
-    Get-Process -Name * | where {$_.path -like "*$cliente*"} | where {$_.path -like "*_$tipAmb*"} | Format-Table -AutoSize ID, ProcessName, Path
+    Get-Process -Name * | Where-Object {$_.path -like "*$cliente*"} | Where-Object {$_.path -like "*_$tipAmb*"} | Format-Table -AutoSize ID, ProcessName, Path
     }
         }
     }else{
