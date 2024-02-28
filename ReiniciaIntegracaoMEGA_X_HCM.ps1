@@ -14,11 +14,11 @@ Clear-Host
     Get-Process -Name SrvMegaIntegracaoSeniorAgenda | Where-Object {$_.Path -like "*$codMega*\Sistema*"} | Format-Table -AutoSize Id, ProcessName, Path
 
     <# Encerra os processos do SrvMega #>
-    Get-Process -Name SrvMegaFinancAgenda | where {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
-    Get-Process -Name SrvMegaIntegracaoCFSAgenda | where {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
-    Get-Process -Name SrvMegaIntegracaoFolhaHCM_ADO | where {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
-    Get-Process -Name SrvMegaIntegracaoSenior| where {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
-    Get-Process -Name SrvMegaIntegracaoSeniorAgenda| where {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
+    Get-Process -Name SrvMegaFinancAgenda | Where-Object {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
+    Get-Process -Name SrvMegaIntegracaoCFSAgenda | Where-Object {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
+    Get-Process -Name SrvMegaIntegracaoFolhaHCM_ADO | Where-Object {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
+    Get-Process -Name SrvMegaIntegracaoSenior| Where-Object {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
+    Get-Process -Name SrvMegaIntegracaoSeniorAgenda| Where-Object {$_.path -like "*$codMega$\Sistema*"} | Stop-Process -Force
     } -ArgumentList $codMega
 
     Write-Host "SrvMegaIntegracaoSeniorAgenda reiniciado com sucesso!!" -ForegroundColor Green
@@ -62,12 +62,12 @@ Clear-Host
         param($cliente)
 
         <# Verifica os processos em execução #>
-        Get-Process -Name *Middleware* | where {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
-        Get-Process -Name *SeniorInstInfoService* | where {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
+        Get-Process -Name *Middleware* | Where-Object {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
+        Get-Process -Name *SeniorInstInfoService* | Where-Object {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
 
         <# Encerra os processos em execução #>
-        Get-Process -Name *Middleware* | where {$_.path -like "*$cliente*"} | Stop-Process -Force
-        Get-Process -Name *SeniorInstInfoService* | where {$_.path -like "*$cliente*"} | Stop-Process -Force
+        Get-Process -Name *Middleware* | Where-Object {$_.path -like "*$cliente*"} | Stop-Process -Force
+        Get-Process -Name *SeniorInstInfoService* | Where-Object {$_.path -like "*$cliente*"} | Stop-Process -Force
         } -ArgumentList $cliente
 
         <# Inicia o serviço #>
@@ -83,8 +83,8 @@ Clear-Host
         Invoke-Command -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 -ScriptBlock {
         param($cliente)
 
-        Get-Process -Name *Middleware* | where {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
-        Get-Process -Name *SeniorInstInfoService* | where {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
+        Get-Process -Name *Middleware* | Where-Object {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
+        Get-Process -Name *SeniorInstInfoService* | Where-Object {$_.path -like "*$cliente*"} | Format-Table -AutoSize ID, ProcessName, Path
         } -ArgumentList $cliente
 
         Write-Host "Processo de integração MEGA X HCM reiniciado com sucesso!!!" -ForegroundColor Green
