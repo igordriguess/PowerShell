@@ -7,7 +7,7 @@ Clear-Host
     <# Coleta de informações do MEGA #>   
     $codMega = Read-Host "Qual o código MEGA do cliente?"
 
-    Invoke-Command -ComputerName OCMEGINT01, OCMEGINT02, OCMEGINT03, OCMEGINT04, OCMEGINT05, OCMEGINT06, OCMEGAPL42 -ScriptBlock {
+    Invoke-Command -ComputerName OCMEGINT01, OCMEGINT02, OCMEGINT03, OCMEGINT04, OCMEGINT05, OCMEGINT06, OCMEGAPL42, OCMEGINTHCM01 -ScriptBlock {
     param($codMega)
 
     <# Verifica a execução do processo SrvMegaIntegracaoSeniorAgenda #>
@@ -52,7 +52,7 @@ Clear-Host
         Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$cliente*"} |
         Where-Object{$_.pathname -like "*SeniorInstInfoService*"} | Format-Table -AutoSize PSComputerName, Name, State, PathName
 
-        Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$cliente*"} |
+        Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01, OCSENMDW01 | Where-Object{$_.pathname -like "*$cliente*"} |
         Where-Object{$_.pathname -like "*Middleware*"} | Format-Table -AutoSize PSComputerName, Name, State, PathName
 
         <# Verifica os processos em execução #>
@@ -76,7 +76,7 @@ Clear-Host
         (Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$cliente*"} |
         Where-Object{$_.pathname -like "*SeniorInstInfoService*"}).StartService()
 
-        (Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01 | Where-Object{$_.pathname -like "*$cliente*"} |
+        (Get-WMIObject win32_service -ComputerName OCSENAPL01, OCSENAPL02, OCSENAPL03, OCSENAPL04, OCSENAPLH01, OCSENMDW01 | Where-Object{$_.pathname -like "*$cliente*"} |
         Where-Object{$_.pathname -like "*Middleware*"}).StartService()
 
         <# Verifica novamente os processos em execução #>
@@ -99,7 +99,8 @@ Clear-Host
         $path = "D:\$using:cliente\$using:cliente.cfg"
         Get-Content -Path $path | Where-Object { $_ -like "*url>https://webmg*" } | Where-Object { $_ -notlike "*connector_url*" } |
         Where-Object { $_ -notlike "*access_url*" } | Where-Object { $_ -notlike "*gestaoponto-frontend*" } |
-        Where-Object { $_ -notlike "*SeniorMonitorCenter*" } | Where-Object { $_ -notlike "*gestaoponto*" } | Format-Table}
+        Where-Object { $_ -notlike "*SeniorMonitorCenter*" } | Where-Object { $_ -notlike "*gestaoponto*" } |
+        Where-Object { $_ -notlike "*basapiens*" } | Format-Table}
 
         Write-Host "Extensão para testes no Rubi: /g5-senior-services/rubi_Synccom_senior_g5_rh_fp_integracoes?wsdl" -ForegroundColor Yellow
 
