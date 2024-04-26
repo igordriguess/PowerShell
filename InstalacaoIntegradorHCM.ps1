@@ -261,18 +261,18 @@ Invoke-Command -ComputerName $server -ScriptBlock{
     # Obtenha o objeto de serviço usando WMI
     $service = Get-WMIObject win32_service | Where-Object{$_.pathname -like "*$cliente*"}
 
-    # Pare o serviço antes de fazer alterações
+    # Para o serviço antes de fazer alterações
     $service.StopService()
 
-    # Altere o usuário e senha do serviço
+    # Altera o usuário e senha do serviço
     $service.Change($null, $null, $null, $null, $null, $null, $newUsername, $newPassword)
 
-    # Inicie o serviço novamente
+    # Inicia o serviço novamente
     $service.StartService()
 
     Write-Host "Iniciando o serviço do Integrador HCM..." -ForegroundColor Yellow
 
-    # Verifica o status dos serviços
+    # Verifica o status do serviço
     Get-WMIObject win32_service | Where-Object{$_.pathname -like "*$cliente*"} | Format-Table PSComputerName, Name, PathName, StartName, State
 
 } -ArgumentList $name, $getCode, $tipAmb, $cliente, $codPDB, $porta1, $porta2, $porta3, $arquivoPEM, $portas, $compartilhamentoFormatado, $integration
