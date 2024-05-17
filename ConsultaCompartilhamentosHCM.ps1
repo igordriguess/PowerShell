@@ -9,7 +9,7 @@ while ($true) {
 
     # Obtém a lista de pastas que atendem aos critérios
     $listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-        Get-ChildItem -Path D:\* -Directory | Where-Object {$_.Name -like "*_p*" -and $_.Name -notlike "*OLD*"}
+        Get-ChildItem -Path D:\* -Directory | Where-Object {$_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"}
     }
 
     # Obtém todos os compartilhamentos do servidor remoto 
