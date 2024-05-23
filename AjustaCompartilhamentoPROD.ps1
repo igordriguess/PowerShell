@@ -47,7 +47,7 @@ while ($true) {
             $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
                 param ($pasta)
                 $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "RH" } | Select-Object -ExpandProperty IdentityReference
+                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
                 return $filteredGroups
             } -ArgumentList $pasta
 
@@ -113,7 +113,7 @@ while ($true) {
             $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
                 param ($pasta)
                 $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "RH" } | Select-Object -ExpandProperty IdentityReference
+                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
                 return $filteredGroups
             } -ArgumentList $pasta
 
@@ -179,7 +179,7 @@ while ($true) {
             $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
                 param ($pasta)
                 $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "RH" } | Select-Object -ExpandProperty IdentityReference
+                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
                 return $filteredGroups
             } -ArgumentList $pasta
 
@@ -245,7 +245,7 @@ while ($true) {
             $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
                 param ($pasta)
                 $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "RH" } | Select-Object -ExpandProperty IdentityReference
+                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
                 return $filteredGroups
             } -ArgumentList $pasta
 
@@ -311,7 +311,7 @@ while ($true) {
             $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
                 param ($pasta)
                 $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "RH" } | Select-Object -ExpandProperty IdentityReference
+                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
                 return $filteredGroups
             } -ArgumentList $pasta
 
