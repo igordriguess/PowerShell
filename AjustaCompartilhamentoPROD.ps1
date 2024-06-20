@@ -1,336 +1,391 @@
 while ($true) {
-    Clear-Host
-    Write-Host "Script para consultar os compartilhamentos de PRODUÇÃO do HCM" -ForegroundColor Green
+Clear-Host
+Write-Host "Script para consultar e corrigir os compartilhamentos de PRODUÇÃO do HCM" -ForegroundColor Green
 
-    # Define o nome do servidor remoto
-    $nomeServidor = "OCSENAPLH01"
+# Define o nome do servidor remoto
+$nomeServidor = "OCSENAPLH01"
 
-    Write-Host "Realizando a consulta no servidor OCSENAPLH01" -ForegroundColor Yellow
+Write-Host "Realizando a consulta no servidor OCSENAPLH01" -ForegroundColor Yellow
 
-    # Obtém a lista de pastas que atendem aos critérios
-    $listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-        Get-ChildItem -Path D:\* -Directory | Where-Object {
-            $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
+# Obtém a lista de pastas que atendem aos critérios
+$listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+    Get-ChildItem -Path D:\* -Directory | Where-Object {
+        $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
+    }
+}
+
+# Obtém todos os compartilhamentos do servidor remoto 
+$compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
+    $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
+}
+
+# Itera sobre cada pasta encontrada
+foreach ($pasta in $listaPastas) {
+    $pastaCompartilhada = $false
+
+    # Compara com cada compartilhamento
+    foreach ($compartilhamento in $compartilhamentos) {
+        if ($pasta.FullName -eq $compartilhamento.Path) {
+            $pastaCompartilhada = $true
+            break
         }
     }
 
-    # Obtém todos os compartilhamentos do servidor remoto 
-    $compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
-        $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
-    }
+    # Verifica se a pasta está compartilhada e compartilha se necessário
+    if ($pastaCompartilhada) {
+        Write-Host "A pasta $($pasta.Name) está compartilhada."
+    } else {
+        Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
+        
+        # Define o nome do compartilhamento
+        $nomeCompartilhamento = $pasta.Name + "$"
 
-    # Itera sobre cada pasta encontrada
-    foreach ($pasta in $listaPastas) {
-        $pastaCompartilhada = $false
+        # Obtém a lista de grupos diferentes para compartilhar
+        $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
 
-        # Compara com cada compartilhamento
-        foreach ($compartilhamento in $compartilhamentos) {
-            if ($pasta.FullName -eq $compartilhamento.Path) {
-                $pastaCompartilhada = $true
-                break
+        # Obtém a ACL da pasta e filtra os grupos apropriados
+        $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($pasta)
+            $acl = Get-Acl -Path $pasta.FullName
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            return $filteredGroups
+        } -ArgumentList $pasta
+
+        # Inicializa os arrays de grupos
+        $grupoRH = @()
+        $grupoHCM = @()
+
+        # Classifica os grupos de acordo com o tipo
+        foreach ($group in $acl) {
+            if ($group -match "_RH_") {
+                $grupoRH += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_HCM_") {
+                $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
-        # Verifica se a pasta está compartilhada e compartilha se necessário
-        if ($pastaCompartilhada) {
-            Write-Host "A pasta $($pasta.Name) está compartilhada."
-        } else {
-            Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
-            
-            # Define o nome do compartilhamento
-            $nomeCompartilhamento = $pasta.Name + "$"
+        # Junta os grupos em um único array para ChangeAccess
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
 
-            # Obtém a lista de grupos diferentes para compartilhar
-            $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
+        # Compartilha a pasta sem alterar permissões NTFS
+        Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
 
-            # Obtém a ACL da pasta e filtra os grupos apropriados
-            $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($pasta)
-                $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
-                return $filteredGroups
-            } -ArgumentList $pasta
+            # Cria o compartilhamento mantendo as permissões NTFS existentes
+            New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
+        } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
+        
+        Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+    }
+}
 
-            $ChangeAccess = $acl -replace '.*\\(.*?)$', '$1'
+# Define o nome do servidor remoto
+$nomeServidor = "OCSENAPL01"
 
-            # Obtém a lista de grupos para conceder permissões de alteração
-            $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud", "MEGACLOUD\$ChangeAccess")
+Write-Host "Realizando a consulta no servidor OCSENAPL01" -ForegroundColor Yellow
 
-            # Compartilha a pasta sem alterar permissões NTFS
-            Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
-    
-                # Cria o compartilhamento mantendo as permissões NTFS existentes
-                New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
-            } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
-            
-            Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+# Obtém a lista de pastas que atendem aos critérios
+$listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+    Get-ChildItem -Path D:\* -Directory | Where-Object {
+        $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
+    }
+}
+
+# Obtém todos os compartilhamentos do servidor remoto 
+$compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
+    $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
+}
+
+# Itera sobre cada pasta encontrada
+foreach ($pasta in $listaPastas) {
+    $pastaCompartilhada = $false
+
+    # Compara com cada compartilhamento
+    foreach ($compartilhamento in $compartilhamentos) {
+        if ($pasta.FullName -eq $compartilhamento.Path) {
+            $pastaCompartilhada = $true
+            break
         }
     }
 
-    # Define o nome do servidor remoto
-    $nomeServidor = "OCSENAPL01"
+    # Verifica se a pasta está compartilhada e compartilha se necessário
+    if ($pastaCompartilhada) {
+        Write-Host "A pasta $($pasta.Name) está compartilhada."
+    } else {
+        Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
+        
+        # Define o nome do compartilhamento
+        $nomeCompartilhamento = $pasta.Name + "$"
 
-    Write-Host "Realizando a consulta no servidor OCSENAPL01" -ForegroundColor Yellow
+        # Obtém a lista de grupos diferentes para compartilhar
+        $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
 
-    # Obtém a lista de pastas que atendem aos critérios
-    $listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-        Get-ChildItem -Path D:\* -Directory | Where-Object {
-            $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
-        }
-    }
+        # Obtém a ACL da pasta e filtra os grupos apropriados
+        $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($pasta)
+            $acl = Get-Acl -Path $pasta.FullName
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            return $filteredGroups
+        } -ArgumentList $pasta
 
-    # Obtém todos os compartilhamentos do servidor remoto 
-    $compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
-        $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
-    }
+        # Inicializa os arrays de grupos
+        $grupoRH = @()
+        $grupoHCM = @()
 
-    # Itera sobre cada pasta encontrada
-    foreach ($pasta in $listaPastas) {
-        $pastaCompartilhada = $false
-
-        # Compara com cada compartilhamento
-        foreach ($compartilhamento in $compartilhamentos) {
-            if ($pasta.FullName -eq $compartilhamento.Path) {
-                $pastaCompartilhada = $true
-                break
+        # Classifica os grupos de acordo com o tipo
+        foreach ($group in $acl) {
+            if ($group -match "_RH_") {
+                $grupoRH += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_HCM_") {
+                $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
-        # Verifica se a pasta está compartilhada e compartilha se necessário
-        if ($pastaCompartilhada) {
-            Write-Host "A pasta $($pasta.Name) está compartilhada."
-        } else {
-            Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
-            
-            # Define o nome do compartilhamento
-            $nomeCompartilhamento = $pasta.Name + "$"
+        # Junta os grupos em um único array para ChangeAccess
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
 
-            # Obtém a lista de grupos diferentes para compartilhar
-            $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
+        # Compartilha a pasta sem alterar permissões NTFS
+        Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
 
-            # Obtém a ACL da pasta e filtra os grupos apropriados
-            $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($pasta)
-                $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
-                return $filteredGroups
-            } -ArgumentList $pasta
+            # Cria o compartilhamento mantendo as permissões NTFS existentes
+            New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
+        } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
+        
+        Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+    }
+}
 
-            $ChangeAccess = $acl -replace '.*\\(.*?)$', '$1'
+# Define o nome do servidor remoto
+$nomeServidor = "OCSENAPL02"
 
-            # Obtém a lista de grupos para conceder permissões de alteração
-            $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud", "MEGACLOUD\$ChangeAccess")
+Write-Host "Realizando a consulta no servidor OCSENAPL02" -ForegroundColor Yellow
 
-            # Compartilha a pasta sem alterar permissões NTFS
-            Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
-    
-                # Cria o compartilhamento mantendo as permissões NTFS existentes
-                New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
-            } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
-            
-            Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+# Obtém a lista de pastas que atendem aos critérios
+$listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+    Get-ChildItem -Path D:\* -Directory | Where-Object {
+        $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
+    }
+}
+
+# Obtém todos os compartilhamentos do servidor remoto 
+$compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
+    $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
+}
+
+# Itera sobre cada pasta encontrada
+foreach ($pasta in $listaPastas) {
+    $pastaCompartilhada = $false
+
+    # Compara com cada compartilhamento
+    foreach ($compartilhamento in $compartilhamentos) {
+        if ($pasta.FullName -eq $compartilhamento.Path) {
+            $pastaCompartilhada = $true
+            break
         }
     }
 
-    # Define o nome do servidor remoto
-    $nomeServidor = "OCSENAPL02"
+    # Verifica se a pasta está compartilhada e compartilha se necessário
+    if ($pastaCompartilhada) {
+        Write-Host "A pasta $($pasta.Name) está compartilhada."
+    } else {
+        Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
+        
+        # Define o nome do compartilhamento
+        $nomeCompartilhamento = $pasta.Name + "$"
 
-    Write-Host "Realizando a consulta no servidor OCSENAPL02" -ForegroundColor Yellow
+        # Obtém a lista de grupos diferentes para compartilhar
+        $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
 
-    # Obtém a lista de pastas que atendem aos critérios
-    $listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-        Get-ChildItem -Path D:\* -Directory | Where-Object {
-            $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
-        }
-    }
+        # Obtém a ACL da pasta e filtra os grupos apropriados
+        $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($pasta)
+            $acl = Get-Acl -Path $pasta.FullName
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            return $filteredGroups
+        } -ArgumentList $pasta
 
-    # Obtém todos os compartilhamentos do servidor remoto 
-    $compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
-        $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
-    }
+        # Inicializa os arrays de grupos
+        $grupoRH = @()
+        $grupoHCM = @()
 
-    # Itera sobre cada pasta encontrada
-    foreach ($pasta in $listaPastas) {
-        $pastaCompartilhada = $false
-
-        # Compara com cada compartilhamento
-        foreach ($compartilhamento in $compartilhamentos) {
-            if ($pasta.FullName -eq $compartilhamento.Path) {
-                $pastaCompartilhada = $true
-                break
+        # Classifica os grupos de acordo com o tipo
+        foreach ($group in $acl) {
+            if ($group -match "_RH_") {
+                $grupoRH += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_HCM_") {
+                $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
-        # Verifica se a pasta está compartilhada e compartilha se necessário
-        if ($pastaCompartilhada) {
-            Write-Host "A pasta $($pasta.Name) está compartilhada."
-        } else {
-            Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
-            
-            # Define o nome do compartilhamento
-            $nomeCompartilhamento = $pasta.Name + "$"
+        # Junta os grupos em um único array para ChangeAccess
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
 
-            # Obtém a lista de grupos diferentes para compartilhar
-            $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
+        # Compartilha a pasta sem alterar permissões NTFS
+        Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
 
-            # Obtém a ACL da pasta e filtra os grupos apropriados
-            $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($pasta)
-                $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
-                return $filteredGroups
-            } -ArgumentList $pasta
+            # Cria o compartilhamento mantendo as permissões NTFS existentes
+            New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
+        } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
+        
+        Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+    }
+}
 
-            $ChangeAccess = $acl -replace '.*\\(.*?)$', '$1'
+# Define o nome do servidor remoto
+$nomeServidor = "OCSENAPL03"
 
-            # Obtém a lista de grupos para conceder permissões de alteração
-            $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud", "MEGACLOUD\$ChangeAccess")
+Write-Host "Realizando a consulta no servidor OCSENAPL03" -ForegroundColor Yellow
 
-            # Compartilha a pasta sem alterar permissões NTFS
-            Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
-    
-                # Cria o compartilhamento mantendo as permissões NTFS existentes
-                New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
-            } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
-            
-            Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+# Obtém a lista de pastas que atendem aos critérios
+$listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+    Get-ChildItem -Path D:\* -Directory | Where-Object {
+        $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
+    }
+}
+
+# Obtém todos os compartilhamentos do servidor remoto 
+$compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
+    $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
+}
+
+# Itera sobre cada pasta encontrada
+foreach ($pasta in $listaPastas) {
+    $pastaCompartilhada = $false
+
+    # Compara com cada compartilhamento
+    foreach ($compartilhamento in $compartilhamentos) {
+        if ($pasta.FullName -eq $compartilhamento.Path) {
+            $pastaCompartilhada = $true
+            break
         }
     }
 
-    # Define o nome do servidor remoto
-    $nomeServidor = "OCSENAPL03"
+    # Verifica se a pasta está compartilhada e compartilha se necessário
+    if ($pastaCompartilhada) {
+        Write-Host "A pasta $($pasta.Name) está compartilhada."
+    } else {
+        Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
+        
+        # Define o nome do compartilhamento
+        $nomeCompartilhamento = $pasta.Name + "$"
 
-    Write-Host "Realizando a consulta no servidor OCSENAPL03" -ForegroundColor Yellow
+        # Obtém a lista de grupos diferentes para compartilhar
+        $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
 
-    # Obtém a lista de pastas que atendem aos critérios
-    $listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-        Get-ChildItem -Path D:\* -Directory | Where-Object {
-            $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
-        }
-    }
+        # Obtém a ACL da pasta e filtra os grupos apropriados
+        $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($pasta)
+            $acl = Get-Acl -Path $pasta.FullName
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            return $filteredGroups
+        } -ArgumentList $pasta
 
-    # Obtém todos os compartilhamentos do servidor remoto 
-    $compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
-        $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
-    }
+        # Inicializa os arrays de grupos
+        $grupoRH = @()
+        $grupoHCM = @()
 
-    # Itera sobre cada pasta encontrada
-    foreach ($pasta in $listaPastas) {
-        $pastaCompartilhada = $false
-
-        # Compara com cada compartilhamento
-        foreach ($compartilhamento in $compartilhamentos) {
-            if ($pasta.FullName -eq $compartilhamento.Path) {
-                $pastaCompartilhada = $true
-                break
+        # Classifica os grupos de acordo com o tipo
+        foreach ($group in $acl) {
+            if ($group -match "_RH_") {
+                $grupoRH += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_HCM_") {
+                $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
-        # Verifica se a pasta está compartilhada e compartilha se necessário
-        if ($pastaCompartilhada) {
-            Write-Host "A pasta $($pasta.Name) está compartilhada."
-        } else {
-            Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
-            
-            # Define o nome do compartilhamento
-            $nomeCompartilhamento = $pasta.Name + "$"
+        # Junta os grupos em um único array para ChangeAccess
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
 
-            # Obtém a lista de grupos diferentes para compartilhar
-            $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
+        # Compartilha a pasta sem alterar permissões NTFS
+        Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
 
-            # Obtém a ACL da pasta e filtra os grupos apropriados
-            $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($pasta)
-                $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
-                return $filteredGroups
-            } -ArgumentList $pasta
+            # Cria o compartilhamento mantendo as permissões NTFS existentes
+            New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
+        } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
+        
+        Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+    }
+}
 
-            $ChangeAccess = $acl -replace '.*\\(.*?)$', '$1'
+# Define o nome do servidor remoto
+$nomeServidor = "OCSENAPL04"
 
-            # Obtém a lista de grupos para conceder permissões de alteração
-            $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud", "MEGACLOUD\$ChangeAccess")
+Write-Host "Realizando a consulta no servidor OCSENAPL04" -ForegroundColor Yellow
 
-            # Compartilha a pasta sem alterar permissões NTFS
-            Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
-    
-                # Cria o compartilhamento mantendo as permissões NTFS existentes
-                New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
-            } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
-            
-            Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
+# Obtém a lista de pastas que atendem aos critérios
+$listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+    Get-ChildItem -Path D:\* -Directory | Where-Object {
+        $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
+    }
+}
+
+# Obtém todos os compartilhamentos do servidor remoto 
+$compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
+    $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
+}
+
+# Itera sobre cada pasta encontrada
+foreach ($pasta in $listaPastas) {
+    $pastaCompartilhada = $false
+
+    # Compara com cada compartilhamento
+    foreach ($compartilhamento in $compartilhamentos) {
+        if ($pasta.FullName -eq $compartilhamento.Path) {
+            $pastaCompartilhada = $true
+            break
         }
     }
 
-    # Define o nome do servidor remoto
-    $nomeServidor = "OCSENAPL04"
+    # Verifica se a pasta está compartilhada e compartilha se necessário
+    if ($pastaCompartilhada) {
+        Write-Host "A pasta $($pasta.Name) está compartilhada."
+    } else {
+        Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
+        
+        # Define o nome do compartilhamento
+        $nomeCompartilhamento = $pasta.Name + "$"
 
-    Write-Host "Realizando a consulta no servidor OCSENAPL04" -ForegroundColor Yellow
+        # Obtém a lista de grupos diferentes para compartilhar
+        $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
 
-    # Obtém a lista de pastas que atendem aos critérios
-    $listaPastas = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-        Get-ChildItem -Path D:\* -Directory | Where-Object {
-            $_.Name -like "*_p*" -and $_.Name -notlike "*OLD*" -and $_.Name -notlike "*Teste*"
-        }
-    }
+        # Obtém a ACL da pasta e filtra os grupos apropriados
+        $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($pasta)
+            $acl = Get-Acl -Path $pasta.FullName
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            return $filteredGroups
+        } -ArgumentList $pasta
 
-    # Obtém todos os compartilhamentos do servidor remoto 
-    $compartilhamentos = Get-WmiObject -ComputerName $nomeServidor -Class Win32_Share | Where-Object {
-        $_.Path -like "D:\*" -and $_.Name -notlike "\\OCSEN*" -and $_.Name -notlike "*_h*" -and $_.Name -notlike "D$" -and $_.Name -notlike "*csmcenter*" -and $_.Name -notlike "*config*"
-    }
+        # Inicializa os arrays de grupos
+        $grupoRH = @()
+        $grupoHCM = @()
 
-    # Itera sobre cada pasta encontrada
-    foreach ($pasta in $listaPastas) {
-        $pastaCompartilhada = $false
-
-        # Compara com cada compartilhamento
-        foreach ($compartilhamento in $compartilhamentos) {
-            if ($pasta.FullName -eq $compartilhamento.Path) {
-                $pastaCompartilhada = $true
-                break
+        # Classifica os grupos de acordo com o tipo
+        foreach ($group in $acl) {
+            if ($group -match "_RH_") {
+                $grupoRH += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_HCM_") {
+                $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
-        # Verifica se a pasta está compartilhada e compartilha se necessário
-        if ($pastaCompartilhada) {
-            Write-Host "A pasta $($pasta.Name) está compartilhada."
-        } else {
-            Write-Host "A pasta $($pasta.Name) não está compartilhada." -ForegroundColor Red
-            
-            # Define o nome do compartilhamento
-            $nomeCompartilhamento = $pasta.Name + "$"
+        # Junta os grupos em um único array para ChangeAccess
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
 
-            # Obtém a lista de grupos diferentes para compartilhar
-            $gruposFull = @("MEGACLOUD\CloudOps", "MEGACLOUD\HCM MANAGER")
+        # Compartilha a pasta sem alterar permissões NTFS
+        Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
+            param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
 
-            # Obtém a ACL da pasta e filtra os grupos apropriados
-            $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($pasta)
-                $acl = Get-Acl -Path $pasta.FullName
-                $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
-                return $filteredGroups
-            } -ArgumentList $pasta
-
-            $ChangeAccess = $acl -replace '.*\\(.*?)$', '$1'
-
-            # Obtém a lista de grupos para conceder permissões de alteração
-            $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud", "MEGACLOUD\$ChangeAccess")
-
-            # Compartilha a pasta sem alterar permissões NTFS
-            Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
-                param ($nomeCompartilhamento, $caminhoPasta, $gruposFull, $grupoChangeAccess)
-    
-                # Cria o compartilhamento mantendo as permissões NTFS existentes
-                New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
-            } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
-            
-            Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
-        }
+            # Cria o compartilhamento mantendo as permissões NTFS existentes
+            New-SmbShare -Name $nomeCompartilhamento -Path $caminhoPasta -FullAccess $gruposFull -ChangeAccess $grupoChangeAccess | Out-Null
+        } -ArgumentList $nomeCompartilhamento, $pasta.FullName, $gruposFull, $grupoChangeAccess
+        
+        Write-Host "A pasta $($pasta.Name) foi compartilhada como \\$nomeServidor\$nomeCompartilhamento." -ForegroundColor Green
     }
+}
 
     # Laço de repetição
     $restartScript = Read-Host -Prompt "Deseja reiniciar o script? Sim(S) Não(N)"
