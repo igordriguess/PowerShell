@@ -47,13 +47,15 @@ foreach ($pasta in $listaPastas) {
         $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
             param ($pasta)
             $acl = Get-Acl -Path $pasta.FullName
-            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_" -or $_.IdentityReference -match "_COMPLIANCE_" -or $_.IdentityReference -match "_SAPIENS_"} | Select-Object -ExpandProperty IdentityReference
             return $filteredGroups
         } -ArgumentList $pasta
 
         # Inicializa os arrays de grupos
         $grupoRH = @()
         $grupoHCM = @()
+        $grupoCompliance = @()
+        $grupoSapiens = @()
 
         # Classifica os grupos de acordo com o tipo
         foreach ($group in $acl) {
@@ -61,11 +63,15 @@ foreach ($pasta in $listaPastas) {
                 $grupoRH += $group -replace '.*\\(.*?)$', '$1'
             } elseif ($group -match "_HCM_") {
                 $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_COMPLIANCE_") {
+                $grupoCompliance += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_SAPIENS_") {
+                $grupoSapiens += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
         # Junta os grupos em um único array para ChangeAccess
-        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM + $grupoCompliance + $grupoSapiens
 
         # Compartilha a pasta sem alterar permissões NTFS
         Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
@@ -124,13 +130,15 @@ foreach ($pasta in $listaPastas) {
         $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
             param ($pasta)
             $acl = Get-Acl -Path $pasta.FullName
-            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_" -or $_.IdentityReference -match "_COMPLIANCE_" -or $_.IdentityReference -match "_SAPIENS_"} | Select-Object -ExpandProperty IdentityReference
             return $filteredGroups
         } -ArgumentList $pasta
 
         # Inicializa os arrays de grupos
         $grupoRH = @()
         $grupoHCM = @()
+        $grupoCompliance = @()
+        $grupoSapiens = @()
 
         # Classifica os grupos de acordo com o tipo
         foreach ($group in $acl) {
@@ -138,11 +146,15 @@ foreach ($pasta in $listaPastas) {
                 $grupoRH += $group -replace '.*\\(.*?)$', '$1'
             } elseif ($group -match "_HCM_") {
                 $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_COMPLIANCE_") {
+                $grupoCompliance += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_SAPIENS_") {
+                $grupoSapiens += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
         # Junta os grupos em um único array para ChangeAccess
-        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM + $grupoCompliance + $grupoSapiens
 
         # Compartilha a pasta sem alterar permissões NTFS
         Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
@@ -201,13 +213,15 @@ foreach ($pasta in $listaPastas) {
         $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
             param ($pasta)
             $acl = Get-Acl -Path $pasta.FullName
-            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_" -or $_.IdentityReference -match "_COMPLIANCE_" -or $_.IdentityReference -match "_SAPIENS_"} | Select-Object -ExpandProperty IdentityReference
             return $filteredGroups
         } -ArgumentList $pasta
 
         # Inicializa os arrays de grupos
         $grupoRH = @()
         $grupoHCM = @()
+        $grupoCompliance = @()
+        $grupoSapiens = @()
 
         # Classifica os grupos de acordo com o tipo
         foreach ($group in $acl) {
@@ -215,11 +229,15 @@ foreach ($pasta in $listaPastas) {
                 $grupoRH += $group -replace '.*\\(.*?)$', '$1'
             } elseif ($group -match "_HCM_") {
                 $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_COMPLIANCE_") {
+                $grupoCompliance += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_SAPIENS_") {
+                $grupoSapiens += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
         # Junta os grupos em um único array para ChangeAccess
-        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM + $grupoCompliance + $grupoSapiens
 
         # Compartilha a pasta sem alterar permissões NTFS
         Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
@@ -278,13 +296,15 @@ foreach ($pasta in $listaPastas) {
         $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
             param ($pasta)
             $acl = Get-Acl -Path $pasta.FullName
-            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_" -or $_.IdentityReference -match "_COMPLIANCE_" -or $_.IdentityReference -match "_SAPIENS_"} | Select-Object -ExpandProperty IdentityReference
             return $filteredGroups
         } -ArgumentList $pasta
 
         # Inicializa os arrays de grupos
         $grupoRH = @()
         $grupoHCM = @()
+        $grupoCompliance = @()
+        $grupoSapiens = @()
 
         # Classifica os grupos de acordo com o tipo
         foreach ($group in $acl) {
@@ -292,11 +312,15 @@ foreach ($pasta in $listaPastas) {
                 $grupoRH += $group -replace '.*\\(.*?)$', '$1'
             } elseif ($group -match "_HCM_") {
                 $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_COMPLIANCE_") {
+                $grupoCompliance += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_SAPIENS_") {
+                $grupoSapiens += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
         # Junta os grupos em um único array para ChangeAccess
-        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM + $grupoCompliance + $grupoSapiens
 
         # Compartilha a pasta sem alterar permissões NTFS
         Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
@@ -355,13 +379,15 @@ foreach ($pasta in $listaPastas) {
         $acl = Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
             param ($pasta)
             $acl = Get-Acl -Path $pasta.FullName
-            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_"} | Select-Object -ExpandProperty IdentityReference
+            $filteredGroups = $acl.Access | Where-Object { $_.IdentityReference -match "_HCM_" -or $_.IdentityReference -match "_RH_" -or $_.IdentityReference -match "_COMPLIANCE_" -or $_.IdentityReference -match "_SAPIENS_"} | Select-Object -ExpandProperty IdentityReference
             return $filteredGroups
         } -ArgumentList $pasta
 
         # Inicializa os arrays de grupos
         $grupoRH = @()
         $grupoHCM = @()
+        $grupoCompliance = @()
+        $grupoSapiens = @()
 
         # Classifica os grupos de acordo com o tipo
         foreach ($group in $acl) {
@@ -369,11 +395,15 @@ foreach ($pasta in $listaPastas) {
                 $grupoRH += $group -replace '.*\\(.*?)$', '$1'
             } elseif ($group -match "_HCM_") {
                 $grupoHCM += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_COMPLIANCE_") {
+                $grupoCompliance += $group -replace '.*\\(.*?)$', '$1'
+            } elseif ($group -match "_SAPIENS_") {
+                $grupoSapiens += $group -replace '.*\\(.*?)$', '$1'
             }
         }
 
         # Junta os grupos em um único array para ChangeAccess
-        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM
+        $grupoChangeAccess = @("MEGACLOUD\Resolvedores Cloud") + $grupoRH + $grupoHCM + $grupoCompliance + $grupoSapiens
 
         # Compartilha a pasta sem alterar permissões NTFS
         Invoke-Command -ComputerName $nomeServidor -ScriptBlock {
