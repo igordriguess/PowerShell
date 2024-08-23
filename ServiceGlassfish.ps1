@@ -4,9 +4,9 @@ Add-Type -AssemblyName Microsoft.VisualBasic
 
 Write-Host "Script para criacao do DOMAIN e servico do Glassfish..." -ForegroundColor Green
 
-Write-Host "Antes de iniciar, valide quais portas devem ser utilizadas e o nome correto do dominio..." -ForegroundColor Yellow
+Write-Host 'IMPORTANTE!! Antes de iniciar, valide quais portas serao utilizadas e se a pasta do Glassfish esta com o nome no padrao "glassfish4"' -ForegroundColor Yellow
 
-$dirGlassfish = Read-Host "Informe a unidade de disco da pasta Glassfish [Exemplo: D]"
+$dirGlassfish = Read-Host "Informe a unidade de disco da pasta Glassfish [Exemplo: C]"
 $user = Read-Host "Informe o usuario do servidor com o dominio [Exemplo srvlocal\senior]"
 $pass = Read-Host "Informe a senha do usuario"
 
@@ -22,7 +22,7 @@ $portNumber = Read-Host 'Qual a porta utilizada pelo banco? [Exemplo: 1433]'
 
 $portConsole = Read-Host "Informe a porta do console Glassfish [Exemplo: 4848]"
 $portHTTPS = Read-Host "Informe a porta HTTPS [Exemplo: 8080"]
-$portListener = Read-Host "Informe a porta Listener [Exemplo: 8181]"
+$portListener = Read-Host "Informe a porta do Listener2 [Exemplo: 8181]"
 $nameDomain = Read-Host "Informe o nome do dominio [Exemplo: domain, domainteste, gestaoponto, gestaopontoteste]"
 
 $scriptdir = "$dirGlassfish" + ":\glassfish4\Configura_glassfish_full"
