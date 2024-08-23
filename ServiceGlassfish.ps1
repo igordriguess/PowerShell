@@ -13,9 +13,9 @@ $pass = Read-Host "Informe a senha do usuario"
 $defDomain = Read-Host "O dominio sera do Gestao do Ponto? (S)Sim, (N)Nao"
 if ($defDomain -eq "S") 
 {
-$usrdatabase = Read-Host 'Digite o nome do usuario da base de dados [Exemplo: usrTarVet]'
+$usrdatabase = Read-Host 'Digite o nome do usuario da base de dados [Exemplo: sa]'
 $passdatabase = Read-Host 'Digite a senha do usuario'
-$database = Read-Host 'Digite o nome da base de dados [Exemplo: TarVet_prd]'
+$database = Read-Host 'Digite o nome da base de dados [Exemplo: vetorh]'
 $serverdatabase = Read-Host 'Digite o IP do banco [Exemplo: 192.168.3.5]'
 $portNumber = Read-Host 'Qual a porta utilizada pelo banco? [Exemplo: 1433]'
 }
