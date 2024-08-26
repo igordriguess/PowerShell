@@ -127,7 +127,7 @@ if (Test-Path $FileName)
 
 # Cria arquivos .bat do Glassfish
 Add-Content $scriptdir\1_Cria_Dominio.bat -value "cd $gfdir" *> $null
-Add-Content $scriptdir\1_Cria_Dominio.bat -value "asadmin.bat create-domain --user admin --nopassword true --savelogin --checkports=false --adminport $portConsole --instanceport $portHTTPS $nameDomain" *> $null
+Add-Content $scriptdir\1_Cria_Dominio.bat -value "asadmin.bat create-domain --user admin --nopassword true --savelogin --checkports=false --adminport $portConsole --instanceport $portHTTP $nameDomain" *> $null
 Add-Content $scriptdir\2_Inicia_Dominio.bat -value "cd $gfdir" *> $null
 Add-Content $scriptdir\2_Inicia_Dominio.bat -value "asadmin.bat start-domain $nameDomain" *> $null
 Add-Content $scriptdir\3_Altera_Senha_Dominio.bat -value "cd $gfdir" *> $null
