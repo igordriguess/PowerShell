@@ -183,7 +183,7 @@ $iiopservice2 = [int]$portConsole - 928
 .\asadmin.bat create-jvm-options "-XX\:+CMSParallelRemarkEnabled" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set server.thread-pools.thread-pool.http-thread-pool.max-thread-pool-size=200 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.network-config.protocols.protocol.http-listener-1.http.request-timeout-seconds=3600 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat set configs.config.server-config.network-config.network-listeners.network-listener.http-listener-2.port=$portHTTP --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.network-config.network-listeners.network-listener.http-listener-2.port=$portHTTPS --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.admin-service.jmx-connector.system.port=$jmxPort --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.orb-listener-1.port=$iioplistener --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL.port=$iiopservice1 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
