@@ -8,21 +8,21 @@ Write-Host 'IMPORTANTE!! Antes de iniciar, valide quais portas serao utilizadas 
 
 $dirGlassfish = Read-Host "Informe a unidade de disco da pasta Glassfish [Exemplo: C]"
 $user = Read-Host "Informe o usuario do servidor com o dominio [Exemplo srvlocal\senior]"
-$pass = Read-Host "Informe a senha do usuario"
+$pass = Read-Host "Informe a senha do usuario" -AsSecureString
 
 $defDomain = Read-Host "O dominio sera do Gestao do Ponto? (S)Sim, (N)Nao"
 if ($defDomain -eq "S") 
 {
 $usrdatabase = Read-Host 'Digite o nome do usuario da base de dados [Exemplo: sa]'
-$passdatabase = Read-Host 'Digite a senha do usuario'
+$passdatabase = Read-Host 'Digite a senha do usuario' -AsSecureString
 $database = Read-Host 'Digite o nome da base de dados [Exemplo: vetorh]'
 $serverdatabase = Read-Host 'Digite o IP do banco [Exemplo: 192.168.3.5]'
 $portNumber = Read-Host 'Qual a porta utilizada pelo banco? [Exemplo: 1433]'
 }
 
 $portConsole = Read-Host "Informe a porta do console Glassfish [Exemplo: 4848]"
-$portHTTPS = Read-Host "Informe a porta HTTPS [Exemplo: 8080"]
-$portListener = Read-Host "Informe a porta do Listener2 [Exemplo: 8181]"
+$portHTTP = Read-Host "Informe a porta HTTP Listener1 [Exemplo: 8080]"
+$portHTTPS = Read-Host "Informe a porta do HTTPS Listener2 [Exemplo: 8181]"
 $nameDomain = Read-Host "Informe o nome do dominio [Exemplo: domain, domainteste, gestaoponto, gestaopontoteste]"
 
 $scriptdir = "$dirGlassfish" + ":\glassfish4\Configura_glassfish_full"
@@ -159,7 +159,13 @@ Start-Process 6_Cria_Servico.bat
 Start-Sleep -s 15
 
 # Configura dominio Glassfish
-cd $gfdir
+cd $gfdir *> $null
+
+# Cálculo automatico das portas
+$jmxPort = [int]$portHTTPS + 505
+$iioplistener = [int]$portConsole - 1148
+$iiopservice1 = [int]$portConsole - 1028
+$iiopservice2 = [int]$portConsole - 928
 
 .\asadmin.bat delete-jvm-options "-XX\:MaxPermSize=192m" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:MaxPermSize=768m" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
@@ -175,9 +181,35 @@ cd $gfdir
 .\asadmin.bat create-jvm-options "-XX\:+UseParNewGC" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:SurvivorRatio=20" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:+CMSParallelRemarkEnabled" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat set server.thread-pools.thread-pool.http-thread-pool.max-thread-pool-size=64 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set server.thread-pools.thread-pool.http-thread-pool.max-thread-pool-size=200 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.network-config.protocols.protocol.http-listener-1.http.request-timeout-seconds=3600 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat set configs.config.server-config.network-config.network-listeners.network-listener.http-listener-2.port=$portListener --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.network-config.network-listeners.network-listener.http-listener-2.port=$portHTTP --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.admin-service.jmx-connector.system.port=$jmxPort --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.orb-listener-1.port=$iioplistener --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL.port=$iiopservice1 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL_MUTUALAUTH.port=$iiopservice2 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+
+# Cálculo automatico da porta JMSProviderPort
+$JMSProviderPort = [int]$portHTTPS - 505
+
+# Realiza o ajute na porta JMSProviderPort
+# Caminho para o arquivo de configuracao do Glassfish
+$configFilePath = "$gfdirdom\$nameDomain\config\domain.xml"
+# Nova porta que deseja definir
+$newPort = "$JMSProviderPort"
+# Ler o conteudo do arquivo XML
+$content = Get-Content -Path $configFilePath -Raw
+# Substituir a porta antiga pela nova
+$content = $content -replace 'value="7676"', "value=`"$newPort`""
+# Salvar o conteudo modificado de volta no arquivo
+Set-Content -Path $configFilePath -Value $content
+
+# Exibe as portas calculadas
+#Write-Host "JMX Port: $jmxPort"
+#Write-Host "IIOP Listener Port: $iioplistener"
+#Write-Host "JMS Provider Port: $JMSProviderPort"
+#Write-Host "IIOP Service 1 Port: $iiopservice1"
+#Write-Host "IIOP Service 2 Port: $iiopservice2"
 
 cd $scriptdir *> $null
 
@@ -207,14 +239,14 @@ Set-Acl "$gfdirdom\$nameDomain" $acl
 Start-Process 7_Parar_Dominio.bat
 Start-Sleep -s 15
 
-# Ajusta servico
+# Ajusta o servico
 cmd.exe /c sc config "$nameDomain" obj="$user" password="$pass" *> $null
 cmd.exe /c sc config "$nameDomain" start=demand *> $null
 
-# Inicia servico
+# Inicia o servico
 Start-Service "$nameDomain"
 
-# Configura do domain do Gestao do Ponto
+# Configura o domain do Gestao do Ponto
 if ($defDomain -eq "S") 
 {
 $tipBanco = Read-Host "Qual o banco de dados utilizado? (1)SQL Server, (2)Oracle"
@@ -237,7 +269,7 @@ elseif ($tipBanco -eq "2")
     Add-Content "$scriptdir\8_Cria_Connection_Pool_GP.bat" -Value "cd $gfdir" *> $null
     Add-Content "$scriptdir\8_Cria_Connection_Pool_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile create-jdbc-connection-pool --restype=java.sql.Driver --driverclassname=oracle.jdbc.driver.OracleDriver --property $infoBancoORA'jdbc:oracle:thin:@$urlBanco/$database.landb.lan.oraclevcn.com' $nameDomain-dataaccess" *> $null
     Add-Content "$scriptdir\9_Cria_Connection_Resource_GP.bat" -Value "cd $gfdir" *> $null
-    Add-Content "$scriptdir\9_Cria_Connection_Resource_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile create-jdbc-resource --connectionpoolid $nameDomain-dataaccess jdbc/$nameDomain-dataaccess__pm" *> $null
+    Add-Content "$scriptdir\9_Cria_Connection_Resource_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile create-jdbc-resource --connectionpoolid $nameDomain-dataaccess jdbc/$nameDomain-dataaccess__pm" 
     Add-Content "$scriptdir\91_Cria_Connection_Resource_GP.bat" -Value "cd $gfdir" *> $null
     Add-Content "$scriptdir\91_Cria_Connection_Resource_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile create-jdbc-resource --connectionpoolid $nameDomain-dataaccess jdbc/$nameDomain-dataaccess__nontx" *> $null
 }
