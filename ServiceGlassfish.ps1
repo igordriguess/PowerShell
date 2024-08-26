@@ -166,6 +166,7 @@ $jmxPort = [int]$portHTTPS + 505
 $iioplistener = [int]$portConsole - 1148
 $iiopservice1 = [int]$portConsole - 1028
 $iiopservice2 = [int]$portConsole - 928
+$telnetport = [int]$portConsole + 1818
 
 .\asadmin.bat delete-jvm-options "-XX\:MaxPermSize=192m" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:MaxPermSize=768m" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
@@ -181,6 +182,9 @@ $iiopservice2 = [int]$portConsole - 928
 .\asadmin.bat create-jvm-options "-XX\:+UseParNewGC" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:SurvivorRatio=20" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:+CMSParallelRemarkEnabled" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat delete-jvm-options "-Dosgi.shell.telnet.port=6666" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat create-jvm-options "-Dosgi.shell.telnet.port=$telnetport" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+#.\asadmin.bat create-jvm-options "-Dhk2.parser.timeout=300" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set server.thread-pools.thread-pool.http-thread-pool.max-thread-pool-size=200 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.network-config.protocols.protocol.http-listener-1.http.request-timeout-seconds=3600 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.network-config.network-listeners.network-listener.http-listener-2.port=$portHTTPS --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
@@ -189,9 +193,10 @@ $iiopservice2 = [int]$portConsole - 928
 .\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL.port=$iiopservice1 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL_MUTUALAUTH.port=$iiopservice2 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 
+#############################################################
+
 # Cálculo automatico da porta JMSProviderPort
 $JMSProviderPort = [int]$portHTTPS - 505
-
 # Realiza o ajute na porta JMSProviderPort
 # Caminho para o arquivo de configuracao do Glassfish
 $configFilePath = "$gfdirdom\$nameDomain\config\domain.xml"
@@ -204,12 +209,15 @@ $content = $content -replace 'value="7676"', "value=`"$newPort`""
 # Salvar o conteudo modificado de volta no arquivo
 Set-Content -Path $configFilePath -Value $content
 
+#############################################################
+
 # Exibe as portas calculadas
 #Write-Host "JMX Port: $jmxPort"
 #Write-Host "IIOP Listener Port: $iioplistener"
 #Write-Host "JMS Provider Port: $JMSProviderPort"
 #Write-Host "IIOP Service 1 Port: $iiopservice1"
 #Write-Host "IIOP Service 2 Port: $iiopservice2"
+#Write-Host "JMSProviderPort Port: $JMSProviderPort"
 
 cd $scriptdir *> $null
 
