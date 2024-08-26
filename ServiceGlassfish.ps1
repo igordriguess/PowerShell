@@ -182,8 +182,8 @@ $telnetport = [int]$portConsole + 1818
 .\asadmin.bat create-jvm-options "-XX\:+UseParNewGC" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:SurvivorRatio=20" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:+CMSParallelRemarkEnabled" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat delete-jvm-options "-Dosgi.shell.telnet.port=6666" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat create-jvm-options "-Dosgi.shell.telnet.port=$telnetport" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+#.\asadmin.bat delete-jvm-options "-Dosgi.shell.telnet.port=6666" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+#.\asadmin.bat create-jvm-options "-Dosgi.shell.telnet.port=$telnetport" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 #.\asadmin.bat create-jvm-options "-Dhk2.parser.timeout=300" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set server.thread-pools.thread-pool.http-thread-pool.max-thread-pool-size=200 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.network-config.protocols.protocol.http-listener-1.http.request-timeout-seconds=3600 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
