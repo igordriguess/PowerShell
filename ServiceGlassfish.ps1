@@ -1,14 +1,16 @@
 Clear-Host
 
-Add-Type -AssemblyName Microsoft.VisualBasic
+#Add-Type -AssemblyName Microsoft.VisualBasic
 
-Write-Host "Script para criacao do DOMAIN e servico do Glassfish..." -ForegroundColor Green
+Write-Host "Script para criacao do dominio e servico do Glassfish..." -ForegroundColor Green
 
 Write-Host 'IMPORTANTE!! Antes de iniciar, valide quais portas serao utilizadas e se a pasta do Glassfish esta com o nome no padrao "glassfish4"' -ForegroundColor Yellow
 
 $dirGlassfish = Read-Host "Informe a unidade de disco da pasta Glassfish [Exemplo: C]"
 $user = Read-Host "Informe o usuario do servidor com o dominio [Exemplo srvlocal\senior]"
 $pass = Read-Host "Informe a senha do usuario" -AsSecureString
+# Converte a senha de SecureString para String
+$pass = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($pass))
 
 $defDomain = Read-Host "O dominio sera do Gestao do Ponto? (S)Sim, (N)Nao"
 if ($defDomain -eq "S") 
@@ -166,9 +168,9 @@ cd $gfdir *> $null
 # Cálculo automatico das portas
 $jmxPort = [int]$portHTTPS + 505
 $iioplistener = [int]$portConsole - 1148
-$iiopservice1 = [int]$portConsole - 1028
-$iiopservice2 = [int]$portConsole - 928
-$telnetport = [int]$portConsole + 1818
+$portSSL = [int]$portConsole - 1028
+$portSSLMUTUALAUTH = [int]$portConsole - 928
+#$telnetport = [int]$portConsole + 1818
 
 .\asadmin.bat delete-jvm-options "-XX\:MaxPermSize=192m" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat create-jvm-options "-XX\:MaxPermSize=768m" --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
@@ -192,8 +194,8 @@ $telnetport = [int]$portConsole + 1818
 .\asadmin.bat set configs.config.server-config.network-config.network-listeners.network-listener.http-listener-2.port=$portHTTPS --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.admin-service.jmx-connector.system.port=$jmxPort --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 .\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.orb-listener-1.port=$iioplistener --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL.port=$iiopservice1 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
-.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL_MUTUALAUTH.port=$iiopservice2 --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL.port=$portSSL --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
+.\asadmin.bat set configs.config.server-config.iiop-service.iiop-listener.SSL_MUTUALAUTH.port=$portSSLMUTUALAUTH --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile *> $null
 
 #############################################################
 
@@ -217,8 +219,8 @@ Set-Content -Path $configFilePath -Value $content
 #Write-Host "JMX Port: $jmxPort"
 #Write-Host "IIOP Listener Port: $iioplistener"
 #Write-Host "JMS Provider Port: $JMSProviderPort"
-#Write-Host "IIOP Service 1 Port: $iiopservice1"
-#Write-Host "IIOP Service 2 Port: $iiopservice2"
+#Write-Host "SSL Port: $portSSL"
+#Write-Host "SSL_MUTUALAUTH Port: $portSSLMUTUALAUTH"
 #Write-Host "JMSProviderPort Port: $JMSProviderPort"
 
 cd $scriptdir *> $null
@@ -254,7 +256,7 @@ cmd.exe /c sc config "$nameDomain" obj="$user" password="$pass" *> $null
 cmd.exe /c sc config "$nameDomain" start=demand *> $null
 
 # Inicia o servico
-Start-Service "$nameDomain"
+Start-Service "$nameDomain" *> $null
 
 # Configura o domain do Gestao do Ponto
 if ($defDomain -eq "S") 
@@ -298,4 +300,6 @@ Start-Sleep -s 10
 Start-Process 91_Cria_Connection_Resource_GP.bat
 Start-Sleep -s 10}
 
-[Microsoft.VisualBasic.Interaction]::MsgBox("Dominio criado com sucesso!!")
+#[Microsoft.VisualBasic.Interaction]::MsgBox("Dominio criado com sucesso!!")
+
+Write-Host "Domínio criado com sucesso!!" -ForegroundColor Green
