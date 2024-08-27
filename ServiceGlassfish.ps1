@@ -9,12 +9,16 @@ Write-Host 'IMPORTANTE!! Antes de iniciar, valide quais portas serao utilizadas 
 $dirGlassfish = Read-Host "Informe a unidade de disco da pasta Glassfish [Exemplo: C]"
 $user = Read-Host "Informe o usuario do servidor com o dominio [Exemplo srvlocal\senior]"
 $pass = Read-Host "Informe a senha do usuario" -AsSecureString
+# Converte a senha de SecureString para String
+$pass = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($pass))
 
 $defDomain = Read-Host "O dominio sera do Gestao do Ponto? (S)Sim, (N)Nao"
 if ($defDomain -eq "S") 
 {
 $usrdatabase = Read-Host 'Digite o nome do usuario da base de dados [Exemplo: sa]'
 $passdatabase = Read-Host 'Digite a senha do usuario' -AsSecureString
+# Converte a senha de SecureString para String
+$passdatabase = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($passdatabase))
 $database = Read-Host 'Digite o nome da base de dados [Exemplo: vetorh]'
 $serverdatabase = Read-Host 'Digite o IP do banco [Exemplo: 192.168.3.5]'
 $portNumber = Read-Host 'Qual a porta utilizada pelo banco? [Exemplo: 1433]'
@@ -40,7 +44,7 @@ $basePath = Join-Path -Path $scriptdir -ChildPath "\Senha_Glassfish"
 # Verifica se a pasta "Senha_Glassfish" ja existe
 if (-Not (Test-Path -Path $basePath)) {
     # Se a pasta não existir, cria a pasta
-    New-Item -Path $basePath -ItemType Directory
+    New-Item -Path $basePath -ItemType Directory *> $null
 }
 
 # Conteudo do arquivo "pwdfile"
