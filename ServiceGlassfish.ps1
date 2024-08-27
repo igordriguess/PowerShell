@@ -266,7 +266,7 @@ $infoBancoORA = "user" + "=" + $usrdatabase + ":password=" + $passdatabase + ":"
 if ($tipBanco -eq "1") 
 {
     Add-Content "$scriptdir\8_Cria_Connection_Pool_GP.bat" -Value "cd $gfdir" *> $null
-    Add-Content "$scriptdir\8_Cria_Connection_Pool_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=C:\glassfish4\Configura_glassfish_full\Senha_Glassfish\pwdfile create-jdbc-connection-pool --restype=java.sql.Driver --driverclassname=com.microsoft.sqlserver.jdbc.SQLServerDriver --property $infoBancoSQL'jdbc:sqlserver://$urlBanco;instanceName=MSSQLSERVER;databaseName=$database' $nameDomain-dataaccess" *> $null
+    Add-Content "$scriptdir\8_Cria_Connection_Pool_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile create-jdbc-connection-pool --restype=java.sql.Driver --driverclassname=com.microsoft.sqlserver.jdbc.SQLServerDriver --property $infoBancoSQL'jdbc:sqlserver://$urlBanco;instanceName=MSSQLSERVER;databaseName=$database' $nameDomain-dataaccess" *> $null
     Add-Content "$scriptdir\9_Cria_Connection_Resource_GP.bat" -Value "cd $gfdir" *> $null
     Add-Content "$scriptdir\9_Cria_Connection_Resource_GP.bat" -Value "asadmin.bat --port $portConsole --passwordfile=$scriptdir\Senha_Glassfish\pwdfile create-jdbc-resource --connectionpoolid $nameDomain-dataaccess jdbc/$nameDomain-dataaccess__pm" *> $null
     Add-Content "$scriptdir\91_Cria_Connection_Resource_GP.bat" -Value "cd $gfdir" *> $null
