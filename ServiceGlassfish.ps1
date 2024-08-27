@@ -9,8 +9,6 @@ Write-Host 'IMPORTANTE!! Antes de iniciar, valide quais portas serao utilizadas 
 $dirGlassfish = Read-Host "Informe a unidade de disco da pasta Glassfish [Exemplo: C]"
 $user = Read-Host "Informe o usuario do servidor com o dominio [Exemplo srvlocal\senior]"
 $pass = Read-Host "Informe a senha do usuario" -AsSecureString
-# Converte a senha de SecureString para String
-$pass = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($pass))
 
 $defDomain = Read-Host "O dominio sera do Gestao do Ponto? (S)Sim, (N)Nao"
 if ($defDomain -eq "S") 
