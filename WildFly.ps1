@@ -1,9 +1,8 @@
 Clear-Host
 
-Write-Host "Script para download dos aplicativos de pré-requisitos Statum" -ForegroundColor Cyan
+Write-Host "Script para download dos aplicativos de pré-requisitos e instalação do WildFly" -ForegroundColor Cyan
 
-Write-Host 'Informe a letra da unidade de disco para salvar os arquivos, Exemplo "C"'
-$disco = Read-Host
+$disco = Read-Host 'Informe a letra da unidade de disco para salvar os arquivos, Exemplo "C"'
 
 $unidadeDisco = $disco + ":"
 
@@ -13,14 +12,14 @@ $destinationFolder = "$unidadeDisco\Statum\"
 
 # Criando a pasta de destino, caso ela não exista
 if (!(Test-Path -Path $destinationFolder)) {
-    New-Item -ItemType Directory -Path $destinationFolder -Force
+    New-Item -ItemType Directory -Path $destinationFolder -Force *> $null
 }
 
 # Diretório de log
-$logFilePath = "$unidadeDisco\Statum\script.log"
+$logFilePath = "$unidadeDisco\Statum\Script.log"
 
 # Limpa o arquivo de log existente ou cria um novo
-Out-File -FilePath $logFilePath -Force
+Out-File -FilePath $logFilePath -Force *> $null
 
 # Definindo as URLs de download e os caminhos de destino
 $downloads = @{
@@ -33,8 +32,6 @@ $downloads = @{
     "VC_redist.x64.exe" = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
     "ChromeSetup.exe" = "https://dl.google.com/chrome/chrome_installer.exe"
     "FileZilla_3.67.1_win64-setup.exe" = "https://fossies.org/windows/misc/FileZilla_3.67.1_win64-setup.exe"
-    #"Wireshark-4.4.0-x64.exe" = "https://www.wireshark.org/download/win64/Wireshark-4.2.6-x64.exe"
-    #"TreeSizeFreeSetup.exe" = "https://downloads.jam-software.de/treesize_free/TreeSizeFreeSetup.exe"
 }
 
 # Baixando cada arquivo e salvando no caminho especificado
@@ -185,7 +182,7 @@ if (Test-Path $zipPath) {
 
     # Extrai o conteúdo do arquivo zip
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, "C:\")
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, "$unidadeDisco\")
 
     #Write-Output "Arquivo extraído com sucesso."
     $message = "Arquivo extraído com sucesso."
@@ -225,7 +222,7 @@ $newDisplayName = "Senior - WildFly"
 #Write-Output "Renomeando o serviço para '$newDisplayName'..."
 $message = "Renomeando o serviço para '$newDisplayName'..."
 $message | Out-File -FilePath $logFilePath -Append
-sc.exe config $serviceName DisplayName= "$newDisplayName"
+sc.exe config $serviceName DisplayName= "$newDisplayName" *> $null
 
 #Write-Output "Serviço renomeado com sucesso para '$newDisplayName'."
 $message = "Serviço renomeado com sucesso."
@@ -233,4 +230,4 @@ $message | Out-File -FilePath $logFilePath -Append
 
 # Exibe a caixa de mensagem no final
 Add-Type -AssemblyName PresentationFramework
-[System.Windows.MessageBox]::Show("Processo finalizado, consulte o log em $unidadeDisco\Senior\Statum\script.log")
+[System.Windows.MessageBox]::Show("Processo finalizado com sucesso!! Consulte o log em $unidadeDisco\Senior\Statum\Script.log")
