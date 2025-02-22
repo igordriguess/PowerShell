@@ -17,7 +17,7 @@ While ($true) {
     }
 
     # Definição da OU padrão
-    $OU_Padrao = "CN=Users,DC=sucosspres,DC=com,DC=br"
+    $OU_Padrao = "CN=Users,DC=DOMAIN,DC=com,DC=br"
 
     # Função para consultar um usuário no AD pelo First Name e permitir manipulação de grupos
     function Get-ADUserInfo {
@@ -39,7 +39,7 @@ While ($true) {
                         "Grupos"          = $groups
                     }
                 }
-                $userTable | Format-Table -AutoSize
+                $userTable | Format-Table -AutoSize -Wrap
             } else {
                 Write-Host "Nenhum usuário encontrado com o First Name '$FirstName'." -ForegroundColor Yellow
             }
@@ -105,7 +105,7 @@ While ($true) {
         try {
             # Cria o novo usuário no Active Directory
             New-ADUser -SamAccountName $SamAccountName -GivenName $FirstName -Surname $LastName -DisplayName "$FirstName $LastName" `
-                -Name "$FirstName $LastName" -UserPrincipalName "$SamAccountName@sucosspres.com.br" -EmailAddress $Email -Title $Cargo `
+                -Name "$FirstName $LastName" -UserPrincipalName "$SamAccountName@DOMAIN.com.br" -EmailAddress $Email -Title $Cargo `
                 -AccountPassword (ConvertTo-SecureString -AsPlainText $Senha -Force) -Enabled $true -PassThru | Out-Null
 
             # Adiciona o usuário aos grupos especificados
@@ -126,7 +126,7 @@ While ($true) {
         )
         try {
             # Verifica se o usuário existe
-            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -SearchBase "DC=sucosspres,DC=com,DC=br" -Properties PasswordNeverExpires -ErrorAction Stop
+            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -SearchBase "DC=DOMAIN,DC=com,DC=br" -Properties PasswordNeverExpires -ErrorAction Stop
 
             if ($user) {
                 # Solicita a nova senha
