@@ -8,7 +8,15 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 
 While ($true) {
     Clear-Host
-    Write-Host "Script para manipular usuários no Active Directory" -ForegroundColor Cyan
+    Write-Host "==============================================" -ForegroundColor Cyan
+    Write-Host "MENU DE GERENCIAMENTO AD" -ForegroundColor Yellow
+    Write-Host "==============================================" -ForegroundColor Cyan
+
+    $domain = "DOMINIO_DO_CLIENTE"
+
+    Write-Host "Domínio: $domain.com.br" -ForegroundColor Green
+
+    Write-Host "---------------------------------------------------------------------"
 
     # Verifica se o módulo Active Directory está instalado
     if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) {
@@ -17,7 +25,7 @@ While ($true) {
     }
 
     # Definição da OU padrão
-    $OU_Padrao = "CN=Users,DC=DOMAIN,DC=com,DC=br"
+    $OU_Padrao = "CN=Users,DC=$domain,DC=com,DC=br"
 
     # Função para consultar um usuário no AD pelo First Name e permitir manipulação de grupos
     function Get-ADUserInfo {
@@ -105,7 +113,7 @@ While ($true) {
         try {
             # Cria o novo usuário no Active Directory
             New-ADUser -SamAccountName $SamAccountName -GivenName $FirstName -Surname $LastName -DisplayName "$FirstName $LastName" `
-                -Name "$FirstName $LastName" -UserPrincipalName "$SamAccountName@DOMAIN.com.br" -EmailAddress $Email -Title $Cargo `
+                -Name "$FirstName $LastName" -UserPrincipalName "$SamAccountName@$domain.com.br" -EmailAddress $Email -Title $Cargo `
                 -AccountPassword (ConvertTo-SecureString -AsPlainText $Senha -Force) -Enabled $true -PassThru | Out-Null
 
             # Adiciona o usuário aos grupos especificados
@@ -126,7 +134,7 @@ While ($true) {
         )
         try {
             # Verifica se o usuário existe
-            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -SearchBase "DC=DOMAIN,DC=com,DC=br" -Properties PasswordNeverExpires -ErrorAction Stop
+            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -SearchBase "DC=$domain,DC=com,DC=br" -Properties PasswordNeverExpires -ErrorAction Stop
 
             if ($user) {
                 # Solicita a nova senha
@@ -171,7 +179,10 @@ While ($true) {
     Write-Host "[3] Remover Usuário"
     Write-Host "[4] Resetar Senha do Usuário"
     Write-Host "[5] Modificar Grupos do Usuário"
-    Write-Host "[6] Sair"
+    Write-Host "[6] Inativar Usuário"
+    Write-Host "[7] Ativar Usuário"
+    Write-Host "[8] Sair do script" -ForegroundColor Red
+    Write-Host "==============================================" -ForegroundColor Cyan
 
     $opcao = Read-Host "Escolha uma opção"
 
@@ -199,7 +210,7 @@ While ($true) {
         "3" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário a ser removido"
 
-            # Verifica se o usuário existe antes de modificar os grupos
+            # Verifica se o usuário existe antes de remover
             $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -ErrorAction SilentlyContinue
 
             if ($user) {
@@ -210,7 +221,16 @@ While ($true) {
         }
         "4" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário para resetar a senha"
-            Reset-ADUserPassword -SamAccountName $SamAccountName
+
+            # Verifica se o usuário existe antes resetar a senha
+            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -ErrorAction SilentlyContinue
+
+            if ($user) {
+                Reset-ADUserPassword -SamAccountName $SamAccountName
+            } else {
+                Write-Host "Usuário '$SamAccountName' não encontrado." -ForegroundColor Yellow
+            }
+
         }
         "5" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário para modificar os grupos"
@@ -225,6 +245,33 @@ While ($true) {
             }
         }
         "6" {
+            $SamAccountName = Read-Host "Digite o nome de login do usuário a ser inativado"
+
+            # Verifica se o usuário existe antes inativar
+            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -ErrorAction SilentlyContinue
+
+            if ($user) {
+                Disable-ADAccount -Identity $SamAccountName
+                Write-Host "Usuário '$SamAccountName' inativado com sucesso!" -ForegroundColor Green
+            } else {
+                Write-Host "Usuário '$SamAccountName' não encontrado." -ForegroundColor Yellow
+            }
+        }
+        "7" {
+            $SamAccountName = Read-Host "Digite o nome de login do usuário a ser ativado"
+
+            # Verifica se o usuário existe antes ativar
+            $user = Get-ADUser -Filter {SamAccountName -eq $SamAccountName} -ErrorAction SilentlyContinue
+
+            if ($user) {
+                Enable-ADAccount -Identity $SamAccountName
+                Write-Host "Usuário '$SamAccountName' ativado com sucesso!" -ForegroundColor Green
+            } else {
+                Write-Host "Usuário '$SamAccountName' não encontrado." -ForegroundColor Yellow
+            }
+
+        }
+        "8" {
             Write-Host "Saindo..." -ForegroundColor Cyan
             exit
         }
