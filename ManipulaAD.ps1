@@ -27,7 +27,7 @@ While ($true) {
     # Definição da OU padrão
     $OU_Padrao = "CN=Users,DC=$domain,DC=com,DC=br"
 
-    # Função para consultar um usuário no AD pelo First Name e permitir manipulação de grupos
+    # Função para consultar um usuário no AD pelo First Name
     function Get-ADUserInfo {
         param (
             [string]$FirstName
@@ -39,11 +39,15 @@ While ($true) {
                 $userTable = @()
                 foreach ($user in $users) {
                     $groups = ($user.MemberOf | ForEach-Object { (Get-ADGroup $_).Name }) -join ", "
+                    
+                    # Define o status como "Ativo" ou "Inativo"
+                    $status = if ($user.Enabled) { "Ativo" } else { "Inativo" }
+
                     $userTable += [PSCustomObject]@{
                         "Nome Completo"   = $user.DisplayName
                         "Usuário"         = $user.SamAccountName
                         "E-mail"          = $user.Mail
-                        "Status"          = $user.Enabled
+                        "Status"          = $status
                         "Grupos"          = $groups
                     }
                 }
@@ -53,6 +57,44 @@ While ($true) {
             }
         } catch {
             Write-Host "Erro ao consultar o usuário: $_" -ForegroundColor Red
+        }
+    }
+
+    # Função para consultar TODOS os usuários no AD
+    function Get-ADUserInfoALL {
+        # Consulta todos os usuários no AD
+        $users = Get-ADUser -Filter {
+        SamAccountName -notlike "administrador" -and
+        SamAccountName -notlike "administrator" -and
+        SamAccountName -notlike "opc" -and
+        SamAccountName -notlike "guest"
+    } -Properties DisplayName, Mail, Enabled, SamAccountName, MemberOf
+
+        if ($users) {
+            Write-Host "Usuários encontrados:" -ForegroundColor Green
+            $userTable = @()
+            foreach ($user in $users) {
+                # Verifica se o usuário pertence a algum grupo
+                $groups = if ($user.MemberOf) {
+                    ($user.MemberOf | ForEach-Object { (Get-ADGroup $_).Name }) -join ", "
+                } else {
+                    "Nenhum grupo"
+                }
+
+                # Define o status como "Ativo" ou "Inativo"
+                $status = if ($user.Enabled) { "Ativo" } else { "Inativo" }
+
+                $userTable += [PSCustomObject]@{
+                    "Nome Completo" = $user.DisplayName
+                    "Usuário"       = $user.SamAccountName
+                    "E-mail"        = $user.Mail
+                    "Status"        = $status
+                    "Grupos"        = $groups
+                }
+            }
+            $userTable | Format-Table -AutoSize -Wrap
+        } else {
+            Write-Host "Nenhum usuário encontrado." -ForegroundColor Yellow
         }
     }
 
@@ -174,14 +216,15 @@ While ($true) {
     }
 
     # Menu de opções
-    Write-Host "[1] Consultar Usuário"
-    Write-Host "[2] Criar Novo Usuário"
-    Write-Host "[3] Remover Usuário"
-    Write-Host "[4] Resetar Senha do Usuário"
-    Write-Host "[5] Modificar Grupos do Usuário"
-    Write-Host "[6] Inativar Usuário"
-    Write-Host "[7] Ativar Usuário"
-    Write-Host "[8] Sair do script" -ForegroundColor Red
+    Write-Host "[1] Consultar Usuário pelo Primeiro Nome"
+    Write-Host "[2] Listar TODOS os usuários"
+    Write-Host "[3] Criar Novo Usuário"
+    Write-Host "[4] Remover Usuário"
+    Write-Host "[5] Resetar Senha do Usuário"
+    Write-Host "[6] Modificar Grupos do Usuário"
+    Write-Host "[7] Inativar Usuário"
+    Write-Host "[8] Ativar Usuário"
+    Write-Host "[9] Sair do script" -ForegroundColor Red
     Write-Host "==============================================" -ForegroundColor Cyan
 
     $opcao = Read-Host "Escolha uma opção"
@@ -192,6 +235,9 @@ While ($true) {
             Get-ADUserInfo -FirstName $firstName
         }
         "2" {
+        Get-ADUserInfoALL
+        }
+        "3" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário (Ex. suporte.senior)"
             $FirstName = Read-Host "Digite o Primeiro Nome"
             $LastName = Read-Host "Digite o Segundo Nome"
@@ -207,7 +253,7 @@ While ($true) {
                 New-ADUserAccount -SamAccountName $SamAccountName -FirstName $FirstName -LastName $LastName -Email $Email -Cargo $Cargo -Senha $Senha -Grupos $gruposArray
             }
         }
-        "3" {
+        "4" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário a ser removido"
 
             # Verifica se o usuário existe antes de remover
@@ -219,7 +265,7 @@ While ($true) {
                 Write-Host "Usuário '$SamAccountName' não encontrado." -ForegroundColor Yellow
             }
         }
-        "4" {
+        "5" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário para resetar a senha"
 
             # Verifica se o usuário existe antes resetar a senha
@@ -232,7 +278,7 @@ While ($true) {
             }
 
         }
-        "5" {
+        "6" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário para modificar os grupos"
     
             # Verifica se o usuário existe antes de modificar os grupos
@@ -244,7 +290,7 @@ While ($true) {
                 Write-Host "Usuário '$SamAccountName' não encontrado." -ForegroundColor Yellow
             }
         }
-        "6" {
+        "7" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário a ser inativado"
 
             # Verifica se o usuário existe antes inativar
@@ -257,7 +303,7 @@ While ($true) {
                 Write-Host "Usuário '$SamAccountName' não encontrado." -ForegroundColor Yellow
             }
         }
-        "7" {
+        "8" {
             $SamAccountName = Read-Host "Digite o nome de login do usuário a ser ativado"
 
             # Verifica se o usuário existe antes ativar
@@ -271,7 +317,7 @@ While ($true) {
             }
 
         }
-        "8" {
+        "9" {
             Write-Host "Saindo..." -ForegroundColor Cyan
             exit
         }
